@@ -1,0 +1,6 @@
+jdk:
+  - openjdk17
+before_install:
+  - cd nms/1_20_3-4/
+  - mvn paper-nms:init
+  - cd ../..

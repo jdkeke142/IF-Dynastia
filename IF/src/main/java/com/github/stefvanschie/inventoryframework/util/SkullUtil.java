@@ -8,6 +8,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Base64;
 import java.util.Objects;
 import java.util.UUID;
@@ -51,16 +53,29 @@ public final class SkullUtil {
      * @param id the skull id
      */
     public static void setSkull(@NotNull ItemMeta meta, @NotNull String id) {
-        GameProfile profile = new GameProfile(UUID.randomUUID(), null);
+        GameProfile profile = new GameProfile(UUID.randomUUID(), "Uninitialized");
         byte[] encodedData = Base64.getEncoder().encode(String.format("{textures:{SKIN:{url:\"%s\"}}}",
-            "http://textures.minecraft.net/texture/" + id).getBytes());
+                "http://textures.minecraft.net/texture/" + id).getBytes());
         profile.getProperties().put("textures", new Property("textures", new String(encodedData)));
 
         try {
-            Field profileField = meta.getClass().getDeclaredField("profile");
-            profileField.setAccessible(true);
-            profileField.set(meta, profile);
-        } catch (NoSuchFieldException | SecurityException | IllegalAccessException e) {
+            Method setProfileMethod;
+
+            try {
+                setProfileMethod = meta.getClass().getDeclaredMethod("setProfile", GameProfile.class);
+            } catch (NoSuchMethodException e) {
+                setProfileMethod = null;
+            }
+
+            if (setProfileMethod != null) {
+                setProfileMethod.setAccessible(true);
+                setProfileMethod.invoke(meta, profile);
+            } else {
+                Field profileField = meta.getClass().getDeclaredField("profile");
+                profileField.setAccessible(true);
+                profileField.set(meta, profile);
+            }
+        } catch (NoSuchFieldException | SecurityException | IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }
     }
